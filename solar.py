@@ -205,6 +205,8 @@ for planet in planet_data:
     
 counter = 0
 
+sleep(5)
+
 while True:
     rate(1000)
     
@@ -221,5 +223,13 @@ while True:
         
     t += dt
         
-    if abs(time_range - t) < 1000:
+    if time_range - t in range(1000):
         print("2 months")
+        print("\nMercury:")
+        print(planet_data["mercury"][3], s_mercury_final)
+
+        print("\nEarth:")
+        print(planet_data["earth"][3], s_earth_final)
+
+        print("\nNeptune:")
+        print(planet_data["neptune"][3], s_neptune_final)
