@@ -7,7 +7,7 @@ from vpython import *
 G = 6.67408e-11 # Gravitational constant
 dt = 1000
 au = 149597900e3 # astronomical unit, m
-conversion = 1731460 # au/day -> m/s
+conversion = au / (24 * 3600) # au/day -> m/s
 
 # time management
 
@@ -19,6 +19,16 @@ t = 0 # time elapsed
 # sun
 m_sun = 1.989e30
 r_sun = 696340000 # radius of sun, m
+s_sun = vec(
+    -6.603194660112856E-03*au,
+    6.043989724696480E-03*au,
+    1.041667200986496E-04*au
+)
+v_sun = vec(
+    -6.881874533998620E-06*conversion,
+    -5.694377441162572E-06*conversion,
+     2.166033793285782E-07*conversion
+)
 
 # planet scaling for easier viewing
 scale_factor = 10
@@ -175,6 +185,7 @@ v_pluto = vec(
 
 
 planet_data = {
+    'sun': [m_sun, r_sun*scale_factor, v_sun, s_sun, color.red],
     'mercury': [m_mercury, r_mercury, v_mercury, s_mercury, color.orange],
     'venus': [m_venus, r_venus, v_venus, s_venus, color.green],
     'earth': [m_earth, r_earth, v_earth, s_earth, color.blue],
@@ -187,49 +198,50 @@ planet_data = {
 }
 
 
-planet_objects = []
+planet_objects = {}
 
 
-# drawn objects
-sun = sphere(radius=r_test, pos=vec(0, 0, 0), color=color.red)
-
-for planet in planet_data:
-    data = planet_data[planet]
+for planet, data in planet_data.items():
     planet_obj = sphere(
         radius = data[1], 
         pos=data[3], 
         color=data[4], 
         make_trail=True)
-    planet_obj.data = data
-    planet_objects.append(planet_obj)
+    planet_obj.mass = data[0]
+    planet_obj.velocity = data[2]
+    planet_objects[planet] = planet_obj
     
-counter = 0
-
-sleep(5)
+# sleep(5)
 
 while True:
     rate(1000)
     
-    for planet in planet_objects:
-        r_hat = -norm(planet.pos-sun.pos) # direction vector
-        dist = mag(planet.pos-sun.pos) # current distance
-        m_planet = planet.data[0]
-        f_sun_planet = G*m_sun*m_planet/dist**2 * r_hat # force of Sun on planet
-        a_planet = f_sun_planet / m_planet # acceleration of planet
-    
-        planet.data[2] += a_planet * dt # update planet's acceleration
-        planet.data[3] += planet.data[2] * dt # update planet's velocity
-        planet.pos = planet.data[3] # update planet's position
-        
+    for _, planet_1 in planet_objects.items():
+        for _, planet_2 in planet_objects.items():
+            if planet_1 != planet_2:
+                r = planet_1.pos-planet_2.pos
+                r_hat = -norm(r)
+                dist = mag(r) # current distance
+                f_planets = G*planet_1.mass*planet_2.mass/dist**2 * r_hat # force of planet_2 on planet_1
+                a_planet = f_planets / planet_1.mass # acceleration of planet
+            
+                planet_1.velocity += a_planet * dt # update planet's velocity
+
+    for name, planet in planet_objects.items():
+        planet.pos += planet.velocity * dt
+
     t += dt
         
-    if time_range - t in range(1000):
+    if time_range - t in range(dt):
         print("2 months")
         print("\nMercury:")
-        print(planet_data["mercury"][3], s_mercury_final)
+        print(planet_objects["mercury"].pos, s_mercury_final)
+        print(mag(planet_objects["mercury"].pos- s_mercury_final))
 
         print("\nEarth:")
-        print(planet_data["earth"][3], s_earth_final)
+        print(planet_objects["earth"].pos, s_earth_final)
+        print(mag(planet_objects["earth"].pos- s_earth_final))
 
         print("\nNeptune:")
-        print(planet_data["neptune"][3], s_neptune_final)
+        print(planet_objects["neptune"].pos, s_neptune_final)
+        print(mag(planet_objects["neptune"].pos- s_neptune_final))
