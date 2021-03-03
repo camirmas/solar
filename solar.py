@@ -2,6 +2,14 @@ from vpython import *
 
 """Visual model of the solar system, utilizing Newton's Gravitational Law."""
 
+def calculate_deviation(observed, expected):
+    """Calculates the percent deviation in planet locations."""
+    return mag(vec(
+        (observed.x-expected.x)/expected.x,
+        (observed.y-expected.y)/expected.y,
+        (observed.z-expected.z)/expected.z,
+    ))*100
+
 # constants
 
 G = 6.67408e-11 # Gravitational constant
@@ -23,6 +31,11 @@ s_sun = vec(
     -6.603194660112856E-03*au,
     6.043989724696480E-03*au,
     1.041667200986496E-04*au
+)
+s_sun_final = vec(
+    -7.017123377936195E-03*au,
+     5.672429511451431E-03*au,
+     1.173484130870040E-04*au
 )
 v_sun = vec(
     -6.881874533998620E-06*conversion,
@@ -171,30 +184,16 @@ v_neptune = vec(
     -7.627988070832003E-05*conversion)
 
 
-# pluto
-r_pluto = r_test
-m_pluto = .0146e24
-s_pluto = vec(
-    1.403341614117954E+01*au,
-    -3.115664704776420E+01*au,
-    -7.253382231337110E-01*au)
-v_pluto = vec(
-    2.943881848867979E-03*conversion,
-    6.268437089847535E-04*conversion,
-    -9.118518513203218E-04*conversion)
-
-
 planet_data = {
-    'sun': [m_sun, r_sun*scale_factor, v_sun, s_sun, color.red],
-    'mercury': [m_mercury, r_mercury, v_mercury, s_mercury, color.orange],
-    'venus': [m_venus, r_venus, v_venus, s_venus, color.green],
-    'earth': [m_earth, r_earth, v_earth, s_earth, color.blue],
-    'mars': [m_mars, r_mars, v_mars, s_mars, color.red],
-    'jupiter': [m_jupiter, r_jupiter, v_jupiter, s_jupiter, color.yellow],
-    'saturn': [m_saturn, r_saturn, v_saturn, s_saturn, color.orange],
-    'uranus': [m_uranus, r_uranus, v_uranus, s_uranus, color.purple],
-    'neptune': [m_neptune, r_neptune, v_neptune, s_neptune, color.blue],
-    'pluto': [m_pluto, r_pluto, v_pluto, s_pluto, color.blue]
+    'Sun': [m_sun, r_sun*scale_factor, v_sun, s_sun, color.red, s_sun_final],
+    'Mercury': [m_mercury, r_mercury, v_mercury, s_mercury, color.orange, s_mercury_final],
+    'Venus': [m_venus, r_venus, v_venus, s_venus, color.green, s_venus_final],
+    'Earth': [m_earth, r_earth, v_earth, s_earth, color.blue, s_earth_final],
+    'Mars': [m_mars, r_mars, v_mars, s_mars, color.red, s_mars_final],
+    'Jupiter': [m_jupiter, r_jupiter, v_jupiter, s_jupiter, color.yellow, s_jupiter_final],
+    'Saturn': [m_saturn, r_saturn, v_saturn, s_saturn, color.orange, s_saturn_final],
+    'Uranus': [m_uranus, r_uranus, v_uranus, s_uranus, color.purple, s_uranus_final],
+    'Neptune': [m_neptune, r_neptune, v_neptune, s_neptune, color.blue, s_neptune_final],
 }
 
 
@@ -209,6 +208,7 @@ for planet, data in planet_data.items():
         make_trail=True)
     planet_obj.mass = data[0]
     planet_obj.velocity = data[2]
+    planet_obj.final_expected_pos = data[5]
     planet_objects[planet] = planet_obj
     
 # sleep(5)
@@ -216,32 +216,33 @@ for planet, data in planet_data.items():
 while True:
     rate(1000)
     
-    for _, planet_1 in planet_objects.items():
+    forces = {}
+    for name, planet_1 in planet_objects.items():
         for _, planet_2 in planet_objects.items():
             if planet_1 != planet_2:
                 r = planet_1.pos-planet_2.pos
                 r_hat = -norm(r)
                 dist = mag(r) # current distance
                 f_planets = G*planet_1.mass*planet_2.mass/dist**2 * r_hat # force of planet_2 on planet_1
-                a_planet = f_planets / planet_1.mass # acceleration of planet
-            
-                planet_1.velocity += a_planet * dt # update planet's velocity
+                if forces.get(name):
+                    forces[name] += f_planets
+                else:
+                    forces[name] = f_planets
 
-    for name, planet in planet_objects.items():
+    for name, f_net in forces.items():
+        planet = planet_objects[name]
+        acceleration = f_net / planet.mass
+        planet.velocity += acceleration * dt
         planet.pos += planet.velocity * dt
 
     t += dt
         
     if time_range - t in range(dt):
-        print("2 months")
-        print("\nMercury:")
-        print(planet_objects["mercury"].pos, s_mercury_final)
-        print(mag(planet_objects["mercury"].pos- s_mercury_final))
+        print("2 months (dt=%s)" % dt)
 
-        print("\nEarth:")
-        print(planet_objects["earth"].pos, s_earth_final)
-        print(mag(planet_objects["earth"].pos- s_earth_final))
-
-        print("\nNeptune:")
-        print(planet_objects["neptune"].pos, s_neptune_final)
-        print(mag(planet_objects["neptune"].pos- s_neptune_final))
+        for name, planet in planet_objects.items():
+            print("\n%s:" % name)
+            print("Observed:", planet.pos)
+            print("Expected:", planet.final_expected_pos)
+            deviation = calculate_deviation(planet.pos, planet.final_expected_pos)
+            print("Deviation (%):", deviation)
