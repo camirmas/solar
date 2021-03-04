@@ -4,16 +4,12 @@ from vpython import *
 
 def calculate_deviation(observed, expected):
     """Calculates the percent deviation in planet locations."""
-    return mag(vec(
-        (observed.x-expected.x)/expected.x,
-        (observed.y-expected.y)/expected.y,
-        (observed.z-expected.z)/expected.z,
-    ))*100
+    return abs((mag(observed)-mag(expected))/mag(expected)*100)
 
 # constants
 
 G = 6.67408e-11 # Gravitational constant
-dt = 1000
+dt = 100
 au = 149597900e3 # astronomical unit, m
 conversion = au / (24 * 3600) # au/day -> m/s
 
